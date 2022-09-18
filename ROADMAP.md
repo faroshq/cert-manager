@@ -1,3 +1,8 @@
+# Important
+
+This is minimal fork for CertManager to support multi-tennant clusters. It is not intended to be used in production.
+It is based on KCP projects.
+
 Roadmap
 =======
 
