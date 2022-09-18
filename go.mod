@@ -19,6 +19,8 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/hashicorp/vault/sdk v0.2.1
+	github.com/kcp-dev/kcp/pkg/apis v0.8.2
+	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/kr/pretty v0.3.0
 	github.com/miekg/dns v1.1.47
 	github.com/mitchellh/go-homedir v1.1.0
@@ -40,7 +42,7 @@ require (
 	google.golang.org/api v0.62.0
 	helm.sh/helm/v3 v3.9.0
 	k8s.io/api v0.24.3
-	k8s.io/apiextensions-apiserver v0.24.2
+	k8s.io/apiextensions-apiserver v0.24.3
 	k8s.io/apimachinery v0.24.3
 	k8s.io/apiserver v0.24.2
 	k8s.io/cli-runtime v0.24.2
@@ -150,7 +152,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kcp-dev/apimachinery v0.0.0-20220803185518-868856d14e8a // indirect
-	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect

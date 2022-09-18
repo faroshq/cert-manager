@@ -27,6 +27,8 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 // ApplyIssuerStatus will make an Apply API call with the given client to the
@@ -41,7 +43,11 @@ func ApplyIssuerStatus(ctx context.Context, cl cmclient.Interface, fieldManager 
 		return err
 	}
 
-	_, err = cl.CertmanagerV1().Issuers(issuer.Namespace).Patch(
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	client := certmanagerv1.NewWithCluster(cl.CertmanagerV1().RESTClient(), clusterName)
+
+	_, err = client.Issuers(issuer.Namespace).Patch(
 		ctx, issuer.Name, apitypes.ApplyPatchType, issuerData,
 		metav1.PatchOptions{Force: pointer.Bool(true), FieldManager: fieldManager}, "status",
 	)
@@ -62,7 +68,11 @@ func ApplyClusterIssuerStatus(ctx context.Context, cl cmclient.Interface, fieldM
 		return err
 	}
 
-	_, err = cl.CertmanagerV1().ClusterIssuers().Patch(
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	client := certmanagerv1.NewWithCluster(cl.CertmanagerV1().RESTClient(), clusterName)
+
+	_, err = client.ClusterIssuers().Patch(
 		ctx, issuer.Name, apitypes.ApplyPatchType, issuerData,
 		metav1.PatchOptions{Force: pointer.Bool(true), FieldManager: fieldManager}, "status",
 	)

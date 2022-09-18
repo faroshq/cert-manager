@@ -214,12 +214,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/clusters"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	"github.com/cert-manager/cert-manager/pkg/controller/certificates"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	"github.com/cert-manager/cert-manager/pkg/util/predicate"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 // Gatherer is used to gather data about a Certificate in order to evaluate
@@ -241,8 +243,13 @@ type Gatherer struct {
 // or secret) is not found, then the returned value of this object is left nil.
 func (g *Gatherer) DataForCertificate(ctx context.Context, crt *cmapi.Certificate) (Input, error) {
 	log := logf.FromContext(ctx)
+
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	key := clusters.ToClusterAwareKey(clusterName, crt.Spec.SecretName)
+
 	// Attempt to fetch the Secret being managed but tolerate NotFound errors.
-	secret, err := g.SecretLister.Secrets(crt.Namespace).Get(crt.Spec.SecretName)
+	secret, err := g.SecretLister.Secrets(crt.Namespace).Get(key)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return Input{}, err
 	}

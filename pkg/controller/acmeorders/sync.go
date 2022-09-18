@@ -40,8 +40,10 @@ import (
 	acmecl "github.com/cert-manager/cert-manager/pkg/acme/client"
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	acmev1 "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/typed/acme/v1"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 const (
@@ -401,7 +403,12 @@ func (c *controller) anyRequiredChallengesDoNotExist(requiredChallenges []cmacme
 
 func (c *controller) createRequiredChallenges(ctx context.Context, o *cmacme.Order, requiredChallenges []cmacme.Challenge) error {
 	for _, ch := range requiredChallenges {
-		_, err := c.cmClient.AcmeV1().Challenges(ch.Namespace).Create(ctx, &ch, metav1.CreateOptions{})
+
+		// KCP: multi-tenant client
+		clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+		client := acmev1.NewWithCluster(c.cmClient.AcmeV1().RESTClient(), clusterName)
+
+		_, err := client.Challenges(ch.Namespace).Create(ctx, &ch, metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			continue
 		}
@@ -429,7 +436,11 @@ func (c *controller) deleteLeftoverChallenges(ctx context.Context, o *cmacme.Ord
 	}
 
 	for _, ch := range leftover {
-		if err := c.cmClient.AcmeV1().Challenges(ch.Namespace).Delete(ctx, ch.Name, metav1.DeleteOptions{}); err != nil {
+		// KCP: multi-tenant client
+		clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+		client := acmev1.NewWithCluster(c.cmClient.AcmeV1().RESTClient(), clusterName)
+
+		if err := client.Challenges(ch.Namespace).Delete(ctx, ch.Name, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}
@@ -444,7 +455,11 @@ func (c *controller) deleteAllChallenges(ctx context.Context, o *cmacme.Order) e
 	}
 
 	for _, ch := range challenges {
-		if err := c.cmClient.AcmeV1().Challenges(ch.Namespace).Delete(ctx, ch.Name, metav1.DeleteOptions{}); err != nil {
+		// KCP: multi-tenant client
+		clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+		client := acmev1.NewWithCluster(c.cmClient.AcmeV1().RESTClient(), clusterName)
+
+		if err := client.Challenges(ch.Namespace).Delete(ctx, ch.Name, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}

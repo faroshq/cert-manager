@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/kcp-dev/logicalcluster/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -121,9 +122,9 @@ func splitNamespacedName(nameStr string) types.NamespacedName {
 
 // Reconcile attempts to ensure that a particular object has all the CAs injected that
 // it has requested.
-func (r *genericInjectReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
-	log := r.log.WithValues(r.resourceName, req.NamespacedName)
+func (r *genericInjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx = logicalcluster.WithCluster(ctx, logicalcluster.New(req.ClusterName))
+	log := r.log.WithValues(r.resourceName, req.NamespacedName, req.ClusterName)
 
 	// fetch the target object
 	target := r.injector.NewTarget()
