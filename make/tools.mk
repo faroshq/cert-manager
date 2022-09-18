@@ -81,7 +81,7 @@ endif
 UC = $(shell echo '$1' | tr a-z A-Z)
 LC = $(shell echo '$1' | tr A-Z a-z)
 
-TOOL_NAMES := 
+TOOL_NAMES :=
 
 # for each item `xxx` in the TOOLS variable:
 # - a $(XXX_VERSION) variable is generated
@@ -189,7 +189,7 @@ $(BINDIR)/downloaded/tools/go-$(VENDORED_GO_VERSION)-%.tar.gz: | $(BINDIR)/downl
 # go dependencies #
 ###################
 
-GO_DEPENDENCIES := 
+GO_DEPENDENCIES :=
 GO_DEPENDENCIES += ginkgo=github.com/onsi/ginkgo/v2/ginkgo
 GO_DEPENDENCIES += cmrel=github.com/cert-manager/release/cmd/cmrel
 GO_DEPENDENCIES += release-notes=k8s.io/release/cmd/release-notes
@@ -336,15 +336,13 @@ K8S_CODEGEN_TOOLS := client-gen conversion-gen deepcopy-gen defaulter-gen inform
 K8S_CODEGEN_TOOLS_PATHS := $(K8S_CODEGEN_TOOLS:%=$(BINDIR)/tools/%)
 K8S_CODEGEN_TOOLS_DOWNLOADS := $(K8S_CODEGEN_TOOLS:%=$(BINDIR)/downloaded/tools/%@$(K8S_CODEGEN_VERSION))
 
+
 .PHONY: k8s-codegen-tools
-k8s-codegen-tools: $(K8S_CODEGEN_TOOLS_PATHS)
-
-$(K8S_CODEGEN_TOOLS_PATHS): $(BINDIR)/tools/%-gen: $(BINDIR)/scratch/K8S_CODEGEN_VERSION | $(BINDIR)/downloaded/tools/%-gen@$(K8S_CODEGEN_VERSION) $(BINDIR)/tools
-	cd $(dir $@) && $(LN) $(patsubst $(BINDIR)/%,../%,$(word 1,$|)) $(notdir $@)
-
-$(K8S_CODEGEN_TOOLS_DOWNLOADS): $(BINDIR)/downloaded/tools/%-gen@$(K8S_CODEGEN_VERSION): $(NEEDS_GO) | $(BINDIR)/downloaded/tools
-	GOBIN=$(PWD)/$(dir $@) $(GO) install k8s.io/code-generator/cmd/$(notdir $@)
-	@mv $(subst @$(K8S_CODEGEN_VERSION),,$@) $@
+k8s-codegen-tools:
+	@for n in $(K8S_CODEGEN_TOOLS); do \
+        rm -rf $(PWD)/$(BINDIR)/tools/"$$n"; \
+		GOBIN=$(PWD)/$(BINDIR)/tools/ $(GO) install ./vendor/k8s.io/code-generator/cmd/$$n; \
+    done
 
 ############################
 # kubebuilder-tools assets #
