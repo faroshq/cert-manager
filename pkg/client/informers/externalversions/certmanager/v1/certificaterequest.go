@@ -56,7 +56,11 @@ func NewCertificateRequestInformer(client versioned.Interface, namespace string,
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredCertificateRequestInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+	return NewFilteredCertificateRequestInformerWithOptions(client, namespace, tweakListOptions, cache.WithResyncPeriod(resyncPeriod), cache.WithIndexers(indexers))
+}
+
+func NewFilteredCertificateRequestInformerWithOptions(client versioned.Interface, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc, opts ...cache.SharedInformerOption) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformerWithOptions(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -72,13 +76,22 @@ func NewFilteredCertificateRequestInformer(client versioned.Interface, namespace
 			},
 		},
 		&certmanagerv1.CertificateRequest{},
-		resyncPeriod,
-		indexers,
+		opts...,
 	)
 }
 
 func (f *certificateRequestInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredCertificateRequestInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+	for k, v := range f.factory.ExtraNamespaceScopedIndexers() {
+		indexers[k] = v
+	}
+
+	return NewFilteredCertificateRequestInformerWithOptions(client, f.namespace,
+		f.tweakListOptions,
+		cache.WithResyncPeriod(resyncPeriod),
+		cache.WithIndexers(indexers),
+		cache.WithKeyFunction(f.factory.KeyFunction()),
+	)
 }
 
 func (f *certificateRequestInformer) Informer() cache.SharedIndexInformer {

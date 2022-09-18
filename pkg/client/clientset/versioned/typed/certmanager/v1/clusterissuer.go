@@ -24,6 +24,7 @@ import (
 
 	v1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	scheme "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/scheme"
+	v2 "github.com/kcp-dev/logicalcluster/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -52,13 +53,15 @@ type ClusterIssuerInterface interface {
 
 // clusterIssuers implements ClusterIssuerInterface
 type clusterIssuers struct {
-	client rest.Interface
+	client  rest.Interface
+	cluster v2.Name
 }
 
 // newClusterIssuers returns a ClusterIssuers
 func newClusterIssuers(c *CertmanagerV1Client) *clusterIssuers {
 	return &clusterIssuers{
-		client: c.RESTClient(),
+		client:  c.RESTClient(),
+		cluster: c.cluster,
 	}
 }
 
@@ -66,6 +69,7 @@ func newClusterIssuers(c *CertmanagerV1Client) *clusterIssuers {
 func (c *clusterIssuers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ClusterIssuer, err error) {
 	result = &v1.ClusterIssuer{}
 	err = c.client.Get().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -82,6 +86,7 @@ func (c *clusterIssuers) List(ctx context.Context, opts metav1.ListOptions) (res
 	}
 	result = &v1.ClusterIssuerList{}
 	err = c.client.Get().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -98,6 +103,7 @@ func (c *clusterIssuers) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +114,7 @@ func (c *clusterIssuers) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 func (c *clusterIssuers) Create(ctx context.Context, clusterIssuer *v1.ClusterIssuer, opts metav1.CreateOptions) (result *v1.ClusterIssuer, err error) {
 	result = &v1.ClusterIssuer{}
 	err = c.client.Post().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterIssuer).
@@ -120,6 +127,7 @@ func (c *clusterIssuers) Create(ctx context.Context, clusterIssuer *v1.ClusterIs
 func (c *clusterIssuers) Update(ctx context.Context, clusterIssuer *v1.ClusterIssuer, opts metav1.UpdateOptions) (result *v1.ClusterIssuer, err error) {
 	result = &v1.ClusterIssuer{}
 	err = c.client.Put().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		Name(clusterIssuer.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -134,6 +142,7 @@ func (c *clusterIssuers) Update(ctx context.Context, clusterIssuer *v1.ClusterIs
 func (c *clusterIssuers) UpdateStatus(ctx context.Context, clusterIssuer *v1.ClusterIssuer, opts metav1.UpdateOptions) (result *v1.ClusterIssuer, err error) {
 	result = &v1.ClusterIssuer{}
 	err = c.client.Put().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		Name(clusterIssuer.Name).
 		SubResource("status").
@@ -147,6 +156,7 @@ func (c *clusterIssuers) UpdateStatus(ctx context.Context, clusterIssuer *v1.Clu
 // Delete takes name of the clusterIssuer and deletes it. Returns an error if one occurs.
 func (c *clusterIssuers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		Name(name).
 		Body(&opts).
@@ -161,6 +171,7 @@ func (c *clusterIssuers) DeleteCollection(ctx context.Context, opts metav1.Delet
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -173,6 +184,7 @@ func (c *clusterIssuers) DeleteCollection(ctx context.Context, opts metav1.Delet
 func (c *clusterIssuers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ClusterIssuer, err error) {
 	result = &v1.ClusterIssuer{}
 	err = c.client.Patch(pt).
+		Cluster(c.cluster).
 		Resource("clusterissuers").
 		Name(name).
 		SubResource(subresources...).

@@ -55,7 +55,11 @@ func NewClusterIssuerInformer(client versioned.Interface, resyncPeriod time.Dura
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredClusterIssuerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+	return NewFilteredClusterIssuerInformerWithOptions(client, tweakListOptions, cache.WithResyncPeriod(resyncPeriod), cache.WithIndexers(indexers))
+}
+
+func NewFilteredClusterIssuerInformerWithOptions(client versioned.Interface, tweakListOptions internalinterfaces.TweakListOptionsFunc, opts ...cache.SharedInformerOption) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformerWithOptions(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -71,13 +75,22 @@ func NewFilteredClusterIssuerInformer(client versioned.Interface, resyncPeriod t
 			},
 		},
 		&certmanagerv1.ClusterIssuer{},
-		resyncPeriod,
-		indexers,
+		opts...,
 	)
 }
 
 func (f *clusterIssuerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterIssuerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	indexers := cache.Indexers{}
+	for k, v := range f.factory.ExtraClusterScopedIndexers() {
+		indexers[k] = v
+	}
+
+	return NewFilteredClusterIssuerInformerWithOptions(client,
+		f.tweakListOptions,
+		cache.WithResyncPeriod(resyncPeriod),
+		cache.WithIndexers(indexers),
+		cache.WithKeyFunction(f.factory.KeyFunction()),
+	)
 }
 
 func (f *clusterIssuerInformer) Informer() cache.SharedIndexInformer {

@@ -16,6 +16,11 @@
 <a href="https://artifacthub.io/packages/search?repo=cert-manager"><img alt="Artifact Hub" src="https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/cert-manager" /></a>
 </p>
 
+# Important
+
+This is minimal fork for CertManager to support multi-tennant clusters. It is not intended to be used in production.
+It is based on KCP projects.
+
 # cert-manager
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
