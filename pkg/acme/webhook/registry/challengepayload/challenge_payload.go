@@ -71,6 +71,10 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 	return payload, nil
 }
 
+func (r *REST) Destroy() {
+	return
+}
+
 // callSolver will call the appropriate method on the REST handlers Solver.
 // It will only return an error if setting up the solver fails.
 func (r *REST) callSolver(req v1alpha1.ChallengeRequest) (v1alpha1.ChallengeResponse, error) {

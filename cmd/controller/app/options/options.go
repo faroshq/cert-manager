@@ -32,7 +32,6 @@ import (
 	challengescontroller "github.com/cert-manager/cert-manager/pkg/controller/acmechallenges"
 	orderscontroller "github.com/cert-manager/cert-manager/pkg/controller/acmeorders"
 	shimgatewaycontroller "github.com/cert-manager/cert-manager/pkg/controller/certificate-shim/gateways"
-	shimingresscontroller "github.com/cert-manager/cert-manager/pkg/controller/certificate-shim/ingresses"
 	cracmecontroller "github.com/cert-manager/cert-manager/pkg/controller/certificaterequests/acme"
 	crapprovercontroller "github.com/cert-manager/cert-manager/pkg/controller/certificaterequests/approver"
 	crcacontroller "github.com/cert-manager/cert-manager/pkg/controller/certificaterequests/ca"
@@ -162,8 +161,10 @@ var (
 		issuerscontroller.ControllerName,
 		clusterissuerscontroller.ControllerName,
 		certificatesmetricscontroller.ControllerName,
-		shimingresscontroller.ControllerName,
-		shimgatewaycontroller.ControllerName,
+		// KCP: disable those as we not converted those to multicluster.
+		// They need access to pods api, maybe more.
+		//shimingresscontroller.ControllerName,
+		//shimgatewaycontroller.ControllerName,
 		orderscontroller.ControllerName,
 		challengescontroller.ControllerName,
 		cracmecontroller.CRControllerName,
@@ -185,9 +186,9 @@ var (
 		issuerscontroller.ControllerName,
 		clusterissuerscontroller.ControllerName,
 		certificatesmetricscontroller.ControllerName,
-		shimingresscontroller.ControllerName,
+		//shimingresscontroller.ControllerName,
 		orderscontroller.ControllerName,
-		challengescontroller.ControllerName,
+		//challengescontroller.ControllerName,
 		cracmecontroller.CRControllerName,
 		crapprovercontroller.ControllerName,
 		crcacontroller.CRControllerName,

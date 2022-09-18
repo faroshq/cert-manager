@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	DefaultLeaderElect                 = true
+	// KCP: For now disable election due to fact virtualWorkspace does not have leases.coordination.k8s.io
+	DefaultLeaderElect                 = false
 	DefaultLeaderElectionNamespace     = "kube-system"
 	DefaultLeaderElectionLeaseDuration = 60 * time.Second
 	DefaultLeaderElectionRenewDeadline = 40 * time.Second

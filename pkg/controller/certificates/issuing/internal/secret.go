@@ -28,6 +28,7 @@ import (
 	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/clusters"
 
 	"github.com/cert-manager/cert-manager/internal/controller/certificates"
 	"github.com/cert-manager/cert-manager/internal/controller/feature"
@@ -36,6 +37,7 @@ import (
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
 	utilpki "github.com/cert-manager/cert-manager/pkg/util/pki"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 var (
@@ -96,9 +98,13 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
 		return err
 	}
 
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, secret.Name)
+
 	// Build Secret apply configuration and options.
 	applyOpts := metav1.ApplyOptions{FieldManager: s.fieldManager, Force: true}
-	applyCnf := applycorev1.Secret(secret.Name, secret.Namespace).
+	applyCnf := applycorev1.Secret(secretkey, secret.Namespace).
 		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
 		WithData(secret.Data).WithType(secret.Type)
 
@@ -181,7 +187,11 @@ func (s *SecretsManager) setValues(crt *cmapi.Certificate, secret *corev1.Secret
 // applied. Only the Secret Type will be persisted from the original Secret.
 func (s *SecretsManager) getCertificateSecret(ctx context.Context, crt *cmapi.Certificate) (*corev1.Secret, error) {
 	// Get existing secret if it exists.
-	existingSecret, err := s.secretLister.Secrets(crt.Namespace).Get(crt.Spec.SecretName)
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, crt.Spec.SecretName)
+
+	existingSecret, err := s.secretLister.Secrets(crt.Namespace).Get(secretkey)
 
 	// If secret doesn't exist yet, return an empty secret that should be
 	// created.
@@ -222,6 +232,7 @@ func (s *SecretsManager) setKeystores(crt *cmapi.Certificate, secret *corev1.Sec
 	// Handle the experimental PKCS12 support
 	if crt.Spec.Keystores != nil && crt.Spec.Keystores.PKCS12 != nil && crt.Spec.Keystores.PKCS12.Create {
 		ref := crt.Spec.Keystores.PKCS12.PasswordSecretRef
+
 		pwSecret, err := s.secretLister.Secrets(crt.Namespace).Get(ref.Name)
 		if err != nil {
 			return fmt.Errorf("fetching PKCS12 keystore password from Secret: %v", err)

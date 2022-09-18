@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kcp-dev/logicalcluster/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/client-go/informers"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clusters"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -49,6 +51,7 @@ import (
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	"github.com/cert-manager/cert-manager/pkg/util/predicate"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -147,6 +150,14 @@ func (c *controller) ProcessItem(ctx context.Context, key string) error {
 		return err
 	}
 
+	spew.Dump(crt)
+
+	// KCP: multi-tenant client
+	if v, ok := crt.Annotations[logicalcluster.AnnotationKey]; ok {
+		name := logicalcluster.New(v)
+		ctx = logicalcluster.WithCluster(ctx, name)
+	}
+
 	if !apiutil.CertificateHasCondition(crt, cmapi.CertificateCondition{
 		Type:   cmapi.CertificateConditionIssuing,
 		Status: cmmeta.ConditionTrue,
@@ -159,7 +170,12 @@ func (c *controller) ProcessItem(ctx context.Context, key string) error {
 		log.V(logf.DebugLevel).Info("status.nextPrivateKeySecretName not yet set, waiting for keymanager before processing certificate")
 		return nil
 	}
-	nextPrivateKeySecret, err := c.secretLister.Secrets(crt.Namespace).Get(*crt.Status.NextPrivateKeySecretName)
+
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, *crt.Status.NextPrivateKeySecretName)
+
+	nextPrivateKeySecret, err := c.secretLister.Secrets(crt.Namespace).Get(secretkey)
 	if apierrors.IsNotFound(err) {
 		log.V(logf.DebugLevel).Info("nextPrivateKeySecretName Secret resource does not exist, waiting for keymanager to create it before continuing")
 		return nil

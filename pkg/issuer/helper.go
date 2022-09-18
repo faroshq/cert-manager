@@ -57,6 +57,9 @@ func NewHelper(issuerLister cmlisters.IssuerLister, clusterIssuerLister cmlister
 func (h *helperImpl) GetGenericIssuer(ref cmmeta.ObjectReference, ns string) (cmapi.GenericIssuer, error) {
 	switch ref.Kind {
 	case "", cmapi.IssuerKind:
+		//TODO: here we can't get issuers.
+		// I think for this arch it would make issuers to be present in the admin cluster, not users....
+
 		return h.issuerLister.Issuers(ns).Get(ref.Name)
 	case cmapi.ClusterIssuerKind:
 		// handle edge case where the ClusterIssuerLister is not set.

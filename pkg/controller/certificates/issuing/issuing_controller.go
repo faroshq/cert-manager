@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kcp-dev/logicalcluster/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clusters"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -178,6 +180,12 @@ func (c *controller) ProcessItem(ctx context.Context, key string) error {
 		return err
 	}
 
+	// KCP: multi-tenant client
+	if v, ok := crt.Annotations[logicalcluster.AnnotationKey]; ok {
+		name := logicalcluster.New(v)
+		ctx = logicalcluster.WithCluster(ctx, name)
+	}
+
 	log = logf.WithResource(log, crt)
 	ctx = logf.NewContext(ctx, log)
 
@@ -197,8 +205,12 @@ func (c *controller) ProcessItem(ctx context.Context, key string) error {
 		return nil
 	}
 
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, *crt.Status.NextPrivateKeySecretName)
+
 	// Fetch and parse the 'next private key secret'
-	nextPrivateKeySecret, err := c.secretLister.Secrets(crt.Namespace).Get(*crt.Status.NextPrivateKeySecretName)
+	nextPrivateKeySecret, err := c.secretLister.Secrets(crt.Namespace).Get(secretkey)
 	if apierrors.IsNotFound(err) {
 		log.V(logf.DebugLevel).Info("Next private key secret does not exist, waiting for keymanager controller")
 		// If secret does not exist, do nothing (keymanager will handle this).
