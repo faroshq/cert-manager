@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/kubernetes"
+	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
@@ -42,6 +44,8 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/controller/clusterissuers"
 	dnsutil "github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
+	"github.com/kcp-dev/logicalcluster/v2"
+
 	"github.com/cert-manager/cert-manager/pkg/metrics"
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
 	"github.com/cert-manager/cert-manager/pkg/util/profiling"
@@ -331,14 +335,17 @@ func startLeaderElection(ctx context.Context, opts *options.ControllerOptions, l
 		Identity:      id + "-external-cert-manager-controller",
 		EventRecorder: recorder,
 	}
+	name := logicalcluster.New("admin")
+	corev1cl := corev1client.NewWithCluster(leaderElectionClient.CoreV1().RESTClient(), name)
+	coordinationv1cl := coordinationv1.NewWithCluster(leaderElectionClient.CoordinationV1().RESTClient(), name)
 
 	// We only support leases for leader election. Previously we supported ConfigMap & Lease objects for leader
 	// election.
 	ml, err := resourcelock.New(resourcelock.LeasesResourceLock,
 		opts.LeaderElectionNamespace,
 		lockName,
-		leaderElectionClient.CoreV1(),
-		leaderElectionClient.CoordinationV1(),
+		corev1cl,
+		coordinationv1cl,
 		lc,
 	)
 	if err != nil {

@@ -22,11 +22,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/clusters"
 
 	"github.com/cert-manager/cert-manager/internal/controller/certificates/policies"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cert-manager/cert-manager/pkg/controller/certificates/issuing/internal"
 	utilpki "github.com/cert-manager/cert-manager/pkg/util/pki"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 // ensureTemporaryCertificate will create a temporary certificate and store it
@@ -46,8 +48,12 @@ func (c *controller) ensureTemporaryCertificate(ctx context.Context, crt *cmapi.
 		return false, nil
 	}
 
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, crt.Spec.SecretName)
+
 	// Attempt to fetch the Secret being managed but tolerate NotFound errors.
-	secret, err := c.secretLister.Secrets(crt.Namespace).Get(crt.Spec.SecretName)
+	secret, err := c.secretLister.Secrets(crt.Namespace).Get(secretkey)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, err
 	}

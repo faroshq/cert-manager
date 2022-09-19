@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/kcp-dev/logicalcluster/v2"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -139,6 +140,11 @@ func (c *controller) ProcessItem(ctx context.Context, key string) error {
 		}
 
 		return err
+	}
+
+	if v, ok := issuer.Annotations[logicalcluster.AnnotationKey]; ok {
+		name := logicalcluster.New(v)
+		ctx = logicalcluster.WithCluster(ctx, name)
 	}
 
 	ctx = logf.NewContext(ctx, logf.WithResource(log, issuer))

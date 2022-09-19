@@ -21,8 +21,10 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
+	"github.com/kcp-dev/logicalcluster/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/clusters"
 
 	"github.com/cert-manager/cert-manager/internal/controller/certificates/policies"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -36,8 +38,12 @@ import (
 // Reconciles over the Certificate's SecretTemplate, and
 // AdditionalOutputFormats.
 func (c *controller) ensureSecretData(ctx context.Context, log logr.Logger, crt *cmapi.Certificate) error {
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, crt.Spec.SecretName)
+
 	// Retrieve the Secret which is associated with this Certificate.
-	secret, err := c.secretLister.Secrets(crt.Namespace).Get(crt.Spec.SecretName)
+	secret, err := c.secretLister.Secrets(crt.Namespace).Get(secretkey)
 
 	// Secret doesn't exist so we can't do anything. The Certificate will be
 	// marked for a re-issuance and the resulting Secret will be evaluated again.

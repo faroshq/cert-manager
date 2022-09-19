@@ -56,7 +56,11 @@ func NewCertificateInformer(client versioned.Interface, namespace string, resync
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredCertificateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+	return NewFilteredCertificateInformerWithOptions(client, namespace, tweakListOptions, cache.WithResyncPeriod(resyncPeriod), cache.WithIndexers(indexers))
+}
+
+func NewFilteredCertificateInformerWithOptions(client versioned.Interface, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc, opts ...cache.SharedInformerOption) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformerWithOptions(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -72,13 +76,22 @@ func NewFilteredCertificateInformer(client versioned.Interface, namespace string
 			},
 		},
 		&certmanagerv1.Certificate{},
-		resyncPeriod,
-		indexers,
+		opts...,
 	)
 }
 
 func (f *certificateInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredCertificateInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+	for k, v := range f.factory.ExtraNamespaceScopedIndexers() {
+		indexers[k] = v
+	}
+
+	return NewFilteredCertificateInformerWithOptions(client, f.namespace,
+		f.tweakListOptions,
+		cache.WithResyncPeriod(resyncPeriod),
+		cache.WithIndexers(indexers),
+		cache.WithKeyFunction(f.factory.KeyFunction()),
+	)
 }
 
 func (f *certificateInformer) Informer() cache.SharedIndexInformer {

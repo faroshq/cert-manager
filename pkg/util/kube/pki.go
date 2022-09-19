@@ -23,17 +23,23 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/clusters"
 
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/cert-manager/cert-manager/pkg/util/errors"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
+	"github.com/kcp-dev/logicalcluster/v2"
 )
 
 // SecretTLSKeyRef will decode a PKCS1/SEC1 (in effect, a RSA or ECDSA) private key stored in a
 // secret with 'name' in 'namespace'. It will read the private key data from the secret
 // entry with name 'keyName'.
 func SecretTLSKeyRef(ctx context.Context, secretLister corelisters.SecretLister, namespace, name, keyName string) (crypto.Signer, error) {
-	secret, err := secretLister.Secrets(namespace).Get(name)
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, name)
+
+	secret, err := secretLister.Secrets(namespace).Get(secretkey)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +74,12 @@ func ParseTLSKeyFromSecret(secret *corev1.Secret, keyName string) (crypto.Signer
 
 	return key, keyBytes, nil
 }
-
 func SecretTLSCertChain(ctx context.Context, secretLister corelisters.SecretLister, namespace, name string) ([]*x509.Certificate, error) {
-	secret, err := secretLister.Secrets(namespace).Get(name)
+	// KCP: multi-tenant client
+	clusterName, _ := logicalcluster.ClusterFromContext(ctx)
+	secretkey := clusters.ToClusterAwareKey(clusterName, name)
+
+	secret, err := secretLister.Secrets(namespace).Get(secretkey)
 	if err != nil {
 		return nil, err
 	}

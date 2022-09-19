@@ -56,7 +56,11 @@ func NewOrderInformer(client versioned.Interface, namespace string, resyncPeriod
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredOrderInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+	return NewFilteredOrderInformerWithOptions(client, namespace, tweakListOptions, cache.WithResyncPeriod(resyncPeriod), cache.WithIndexers(indexers))
+}
+
+func NewFilteredOrderInformerWithOptions(client versioned.Interface, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc, opts ...cache.SharedInformerOption) cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformerWithOptions(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -72,13 +76,22 @@ func NewFilteredOrderInformer(client versioned.Interface, namespace string, resy
 			},
 		},
 		&acmev1.Order{},
-		resyncPeriod,
-		indexers,
+		opts...,
 	)
 }
 
 func (f *orderInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredOrderInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+	for k, v := range f.factory.ExtraNamespaceScopedIndexers() {
+		indexers[k] = v
+	}
+
+	return NewFilteredOrderInformerWithOptions(client, f.namespace,
+		f.tweakListOptions,
+		cache.WithResyncPeriod(resyncPeriod),
+		cache.WithIndexers(indexers),
+		cache.WithKeyFunction(f.factory.KeyFunction()),
+	)
 }
 
 func (f *orderInformer) Informer() cache.SharedIndexInformer {
